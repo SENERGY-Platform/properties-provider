@@ -1,2 +1,2 @@
-# process-designer
-Designer to model BPMN processes
+# properties-provider
+Properties provider for using bpmn-js with the SENERGY platform
