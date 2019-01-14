@@ -1,0 +1,13 @@
+logs/*
+!.gitkeep
+dist/
+node_modules/
+bower_components/
+tmp
+.DS_Store
+.idea
+.env
+.env_local
+.env_global
+modeller_build.sh
+docker-compose.yml
