@@ -193,7 +193,6 @@ module.exports = {
                         var outputs = createTaskResults(bpmnjs, connectorInfo.skeleton.outputs);
                         var inputOutput = createInputOutput(bpmnjs, inputs, outputs);
                         setExtentionsElement(bpmnjs, serviceTask, inputOutput);
-                        bpmnjs.designerCallbacks.registerOutputs(outputs);
 
                         refresh();
 
@@ -281,8 +280,6 @@ module.exports = {
                         var inputOutput = createInputOutput(bpmnjs, inputs, outputs)
                         setExtentionsElement(bpmnjs, serviceTask, inputOutput)
                         
-                        bpmnjs.designerCallbacks.registerOutputs(outputs)
-
                         refresh();
                     });
                 });
