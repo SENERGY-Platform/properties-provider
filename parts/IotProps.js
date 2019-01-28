@@ -52,6 +52,14 @@ var createTextInputParameter = function(bpmnjs, name, value){
     return createInputParameter(bpmnjs, name, value, null)
 };
 
+var createMailParameter = function (bpmnjs, to, subj, content) {
+    return [
+        createInputParameter(bpmnjs, "to", to),
+        createInputParameter(bpmnjs, "subject", subj),
+        createInputParameter(bpmnjs, "text", content),
+    ];
+};
+
 var createScriptInputParameter = function(bpmnjs, name, value){
     var moddle = bpmnjs.get('moddle');
     var script = moddle.create('camunda:Script', {
@@ -66,6 +74,14 @@ var createInputOutput = function(bpmnjs, inputs, outputs){
     return moddle.create('camunda:InputOutput', {
         inputParameters: inputs,
         outputParameters: outputs
+    });
+};
+
+var createConnector = function(bpmnjs, connectorId, inputs, outputs){
+    var moddle = bpmnjs.get('moddle');
+    return moddle.create('camunda:Connector', {
+        connectorId: connectorId,
+        inputOutput: createInputOutput(bpmnjs, inputs, outputs)
     });
 };
 
@@ -174,6 +190,59 @@ function getDeviceTypeServiceFromServiceElement(element){
 
 
 module.exports = {
+    email: function(group, element, bpmnjs, eventBus, bpmnFactory, replace, selection){
+        var refresh = function(){
+            eventBus.fire('elements.changed', {elements: [element]});
+        };
+
+        if(bpmnjs.designerCallbacks.configEmail){
+            group.entries.push({
+                id: "send-email-helper",
+                html: "<button class='bpmn-iot-button' data-action='sendEmailHelper'>Email</button>",
+                sendEmailHelper: function(element, node) {
+                    var moddle = bpmnjs.get('moddle');
+                    var bo = getBusinessObject(element);
+                    var to = "";
+                    var subject = "";
+                    var content = "";
+                    if(
+                        bo.extensionElements
+                        && bo.extensionElements.values
+                        && bo.extensionElements.values[0]
+                        && bo.extensionElements.values[0].inputOutput
+                        && bo.extensionElements.values[0].inputOutput.inputParameters
+                    ) {
+                        var inputs = bo.extensionElements.values[0].inputOutput.inputParameters;
+                        for(var i = 0; i < inputs.length; i++){
+                            if(inputs[i].name == "to") {
+                                to = inputs[i].value;
+                            }
+                            if(inputs[i].name == "subject") {
+                                subject = inputs[i].value;
+                            }
+                            if(inputs[i].name == "text") {
+                                content = inputs[i].value;
+                            }
+                        }
+                    }
+
+                    bpmnjs.designerCallbacks.configEmail(to, subject, content, function(to, subj, content){
+                        helper.toServiceTask(bpmnFactory, replace, selection, element, function(serviceTask, element){
+                            serviceTask.name = "send mail";
+                            var inputs = createMailParameter(bpmnjs, to, subj, content);
+                            var mailConnector = createConnector(bpmnjs, "mail-send", inputs, []);
+                            setExtentionsElement(bpmnjs, serviceTask, mailConnector);
+                            refresh();
+                        });
+                    }, function(){
+
+                    });
+                    return true;
+                }
+            });
+        }
+    },
+
     external: function(group, element, bpmnjs, eventBus, bpmnFactory, replace, selection) {
         var refresh = function(){
             eventBus.fire('elements.changed', {elements: [element]});
@@ -184,7 +253,7 @@ module.exports = {
             html: "<button class='bpmn-iot-button' data-action='selectIotDeviceTypeForExtern'>Use IoT Device-Type</button>",
             selectIotDeviceTypeForExtern: function(element, node) {
                 bpmnjs.designerCallbacks.findIotDeviceType(getDeviceTypeServiceFromServiceElement(element), function(connectorInfo){
-                    helper.toServiceTask(bpmnFactory, replace, selection, element, function(serviceTask, element){
+                    helper.toExternalServiceTask(bpmnFactory, replace, selection, element, function(serviceTask, element){
                         serviceTask.topic = "execute_in_dose";
                         serviceTask.name = connectorInfo.deviceType.name + " " + connectorInfo.service.name;
                         var script = createTextInputParameter(bpmnjs, "payload", getPayload(connectorInfo));
@@ -269,7 +338,7 @@ module.exports = {
             html: "<button class='bpmn-iot-button' data-action='influxButton'>Add data analysis</button>",
             influxButton: function(element, node) {
                 bpmnjs.designerCallbacks.editHistoricDataConfig(getAggregationConfigFromServiceElement(element), function(config){
-                    helper.toServiceTask(bpmnFactory, replace, selection, element, function(serviceTask, element){
+                    helper.toExternalServiceTask(bpmnFactory, replace, selection, element, function(serviceTask, element){
                         // Set topic and name in designer 
                         serviceTask.topic = "export"
                         serviceTask.name = config.analysisAction

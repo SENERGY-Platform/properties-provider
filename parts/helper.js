@@ -38,9 +38,10 @@ var is = require('bpmn-js/lib/util/ModelUtil').is,
 
 module.exports = {
     toMessageEvent: toMessageEvent,
-    toServiceTask: toServiceTask,
+    toExternalServiceTask: toExternalServiceTask,
     getInputPaths: getInputPaths,
-    getOutputPaths: getOutputPaths
+    getOutputPaths: getOutputPaths,
+    toServiceTask: toServiceTask
 };
 
 var CUSTOM_PROPERTIES = [
@@ -123,6 +124,56 @@ function toMessageEvent(bpmnFactory, replace, selection, element, additionalChan
 }
 
 function toServiceTask(bpmnFactory, replace, selection, element, additionalChanges) {
+    var target = {
+        type: 'bpmn:ServiceTask'
+    };
+    var hints = {};
+
+    var type = target.type;
+    var oldBusinessObject = element.businessObject;
+
+    var newBusinessObject = bpmnFactory.create(type);
+
+    var newElement = {
+        type: type,
+        businessObject: newBusinessObject
+    };
+
+    // initialize special properties defined in target definition
+    assign(newBusinessObject, pick(target, CUSTOM_PROPERTIES));
+
+    newBusinessObject.name = oldBusinessObject.name;
+
+    // retain loop characteristics if the target element is not an event sub process
+    if (!isEventSubProcess(newBusinessObject)) {
+        newBusinessObject.loopCharacteristics = oldBusinessObject.loopCharacteristics;
+    }
+
+    // retain default flow's reference between inclusive <-> exclusive gateways and activities
+    if ((is(oldBusinessObject, 'bpmn:ExclusiveGateway') || is(oldBusinessObject, 'bpmn:InclusiveGateway') ||
+        is(oldBusinessObject, 'bpmn:Activity')) &&
+        (is(newBusinessObject, 'bpmn:ExclusiveGateway') || is(newBusinessObject, 'bpmn:InclusiveGateway') ||
+            is(newBusinessObject, 'bpmn:Activity')))
+    {
+        newBusinessObject.default = oldBusinessObject.default;
+    }
+
+    if (oldBusinessObject.isForCompensation) {
+        newBusinessObject.isForCompensation = true;
+    }
+
+    if(additionalChanges){
+        additionalChanges(newBusinessObject, newElement);
+    }
+
+    newElement = replace.replaceElement(element, newElement, hints);
+
+    if (hints.select !== false) {
+        selection.select(newElement);
+    }
+}
+
+function toExternalServiceTask(bpmnFactory, replace, selection, element, additionalChanges) {
     var target = {
         type: 'bpmn:ServiceTask'
     };

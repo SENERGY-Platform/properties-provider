@@ -46,6 +46,7 @@ function SenergyPropertiesProvider(eventBus, bpmnFactory, elementRegistry, eleme
         var camundaTabs = camunda.getTabs(element);
         camundaTabs[0].groups.unshift(createIotInfoGroup(element, bpmnjs));
         camundaTabs[0].groups.unshift(createIotExternalTaskGroup(element, bpmnjs, eventBus, bpmnFactory, replace, selection));
+        camundaTabs[0].groups.unshift(createHelperGroup(element, bpmnjs, eventBus, bpmnFactory, replace, selection));
         camundaTabs[0].groups.unshift(createInfluxTaskGroup(element, bpmnjs, eventBus, bpmnFactory, replace, selection));
         camundaTabs[0].groups.unshift(createTimeEventHelperGroup(element, bpmnjs, eventBus, modeling));
         return camundaTabs;
@@ -73,6 +74,17 @@ function createIotExternalTaskGroup(element, bpmnjs, eventBus, bpmnFactory, repl
     };
     iotProps.external(iotGroup, element, bpmnjs, eventBus, bpmnFactory, replace, selection);
     return iotGroup;
+}
+
+function createHelperGroup(element, bpmnjs, eventBus, bpmnFactory, replace, selection) {
+    var helperGroup = {
+        id: 'iot-helper',
+        label: 'IoT-Helper',
+        entries: [],
+        enabled: isTask
+    };
+    iotProps.email(helperGroup, element, bpmnjs, eventBus, bpmnFactory, replace, selection);
+    return helperGroup;
 }
 
 
