@@ -20,9 +20,9 @@ var extensionElementsHelper = require('bpmn-js-properties-panel/lib/helper/Exten
 var ImplementationTypeHelper = require('bpmn-js-properties-panel/lib/helper/ImplementationTypeHelper');
 var helper = require('./helper');
 
-function generateUUID () { // Public Domain/MIT
+function generateUUID() { // Public Domain/MIT
     var d = new Date().getTime();
-    if (typeof performance !== 'undefined' && typeof performance.now === 'function'){
+    if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
         d += performance.now(); //use high-precision timer if available
     }
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
@@ -32,15 +32,15 @@ function generateUUID () { // Public Domain/MIT
     });
 }
 
-var createInputParameter = function(bpmnjs, name, value, definition){
+var createInputParameter = function (bpmnjs, name, value, definition) {
     var moddle = bpmnjs.get('moddle');
-    if(value !== null){
+    if (value !== null) {
         return moddle.create('camunda:InputParameter', {
             name: name,
             value: value
         });
     }
-    if(definition){
+    if (definition) {
         return moddle.create('camunda:InputParameter', {
             name: name,
             definition: definition
@@ -48,7 +48,7 @@ var createInputParameter = function(bpmnjs, name, value, definition){
     }
 };
 
-var createTextInputParameter = function(bpmnjs, name, value){
+var createTextInputParameter = function (bpmnjs, name, value) {
     return createInputParameter(bpmnjs, name, value, null)
 };
 
@@ -60,7 +60,7 @@ var createMailParameter = function (bpmnjs, to, subj, content) {
     ];
 };
 
-var createScriptInputParameter = function(bpmnjs, name, value){
+var createScriptInputParameter = function (bpmnjs, name, value) {
     var moddle = bpmnjs.get('moddle');
     var script = moddle.create('camunda:Script', {
         scriptFormat: "Javascript",
@@ -69,7 +69,7 @@ var createScriptInputParameter = function(bpmnjs, name, value){
     return createInputParameter(bpmnjs, name, null, script)
 };
 
-var createInputOutput = function(bpmnjs, inputs, outputs){
+var createInputOutput = function (bpmnjs, inputs, outputs) {
     var moddle = bpmnjs.get('moddle');
     return moddle.create('camunda:InputOutput', {
         inputParameters: inputs,
@@ -77,7 +77,7 @@ var createInputOutput = function(bpmnjs, inputs, outputs){
     });
 };
 
-var createConnector = function(bpmnjs, connectorId, inputs, outputs){
+var createConnector = function (bpmnjs, connectorId, inputs, outputs) {
     var moddle = bpmnjs.get('moddle');
     return moddle.create('camunda:Connector', {
         connectorId: connectorId,
@@ -96,13 +96,13 @@ function getPayload(connectorInfo) {
 
 function createOutputParameter(bpmnjs, name, value, definition) {
     var moddle = bpmnjs.get('moddle');
-    if(value){
+    if (value) {
         return moddle.create('camunda:OutputParameter', {
             name: name,
             value: value
         });
     }
-    if(definition){
+    if (definition) {
         return moddle.create('camunda:OutputParameter', {
             name: name,
             definition: definition
@@ -110,7 +110,7 @@ function createOutputParameter(bpmnjs, name, value, definition) {
     }
 }
 
-var setExtentionsElement = function(bpmnjs, parent, child){
+var setExtentionsElement = function (bpmnjs, parent, child) {
     var moddle = bpmnjs.get('moddle');
     parent.extensionElements = moddle.create('bpmn:ExtensionElements', {
         values: [child]
@@ -140,16 +140,16 @@ function getRoot(businessObject) {
 
 function createTaskParameter(bpmnjs, inputs) {
     var result = [];
-    if(!inputs){
+    if (!inputs) {
         return result;
     }
     var inputPaths = helper.getInputPaths(inputs);
     var names = [];
-    for(i=0; i<inputPaths.length; i++){
+    for (i = 0; i < inputPaths.length; i++) {
         names.push(inputPaths[i].join("."))
     }
     names.sort();
-    for(i=0; i<names.length; i++){
+    for (i = 0; i < names.length; i++) {
         result.push(createTextInputParameter(bpmnjs, names[i], ""));
     }
     return result;
@@ -158,29 +158,29 @@ function createTaskParameter(bpmnjs, inputs) {
 
 function createTaskResults(bpmnjs, outputs) {
     var result = [];
-    if(!outputs){
+    if (!outputs) {
         return result;
     }
     var paths = helper.getOutputPaths(outputs);
     var variables = [];
-    for(i=0; i<paths.length; i++){
-        variables.push("${result."+paths[i].join(".")+"}")
+    for (i = 0; i < paths.length; i++) {
+        variables.push("${result." + paths[i].join(".") + "}")
     }
     variables.sort();
-    for(i=0; i<variables.length; i++){
-        var name = paths[i][paths[i].length -1].replace(/[\[\]]/g, "_");
+    for (i = 0; i < variables.length; i++) {
+        var name = paths[i][paths[i].length - 1].replace(/[\[\]]/g, "_");
         result.push(createOutputParameter(bpmnjs, name, variables[i], null));
     }
     return result;
 }
 
 
-function getDeviceTypeServiceFromServiceElement(element){
+function getDeviceTypeServiceFromServiceElement(element) {
     var extentionElements = getBusinessObject(element).extensionElements;
-    if(extentionElements && extentionElements.values && extentionElements.values[0]){
+    if (extentionElements && extentionElements.values && extentionElements.values[0]) {
         var inputs = extentionElements.values[0].inputParameters;
-        for(i=0; i<inputs.length; i++){
-            if(inputs[i].name == "payload"){
+        for (i = 0; i < inputs.length; i++) {
+            if (inputs[i].name == "payload") {
                 var payload = JSON.parse(inputs[i].value);
                 return {serviceId: payload.service, deviceTypeId: payload.device_type};
             }
@@ -190,22 +190,73 @@ function getDeviceTypeServiceFromServiceElement(element){
 
 
 module.exports = {
-    email: function(group, element, bpmnjs, eventBus, bpmnFactory, replace, selection){
-        var refresh = function(){
+    completion: function (group, element, options, bpmnjs, eventBus, bpmnFactory, replace, selection) {
+        var refresh = function () {
             eventBus.fire('elements.changed', {elements: [element]});
         };
 
-        if(bpmnjs.designerCallbacks.configEmail){
+        var getImplementationType = options.getImplementationType;
+        var getSelected = options.getSelectedParameter;
+
+        function isExternal(element) {
+            return getImplementationType(element) === 'external';
+        }
+
+        var selectOptions = [
+            {value: 'optimistic', name: 'optimistic'},
+            {value: 'pessimistic', name: 'pessimistic'},
+        ];
+
+        group.entries.push(entryFactory.selectBox({
+            id: 'completionStrategy',
+            label: 'Strategy',
+            selectOptions: selectOptions,
+            modelProperty: 'completionStrategy',
+
+            get: function (element, node) {
+                var bo = getSelected(element, node);
+
+                var completionStrategy = 'optimistic';
+
+                if (typeof bo !== 'undefined') {
+                    var definition = bo.get('definition');
+                    if(typeof definition !== 'undefined'){
+                        var type = definition.$type;
+                        completionStrategy = typeInfo[type].value;
+                    }
+                }
+
+                return {
+                    completionStrategy: completionStrategy
+                };
+            },
+
+            set: function (element, values, node) {
+                var bo = getBusinessObject(element)
+
+            },
+
+            hidden: function (element, node) {
+                return !isExternal(element);
+            }
+        }));
+    },
+    email: function (group, element, bpmnjs, eventBus, bpmnFactory, replace, selection) {
+        var refresh = function () {
+            eventBus.fire('elements.changed', {elements: [element]});
+        };
+
+        if (bpmnjs.designerCallbacks.configEmail) {
             group.entries.push({
                 id: "send-email-helper",
                 html: "<button class='bpmn-iot-button' data-action='sendEmailHelper'>Email</button>",
-                sendEmailHelper: function(element, node) {
+                sendEmailHelper: function (element, node) {
                     var moddle = bpmnjs.get('moddle');
                     var bo = getBusinessObject(element);
                     var to = "";
                     var subject = "";
                     var content = "";
-                    if(
+                    if (
                         bo.extensionElements
                         && bo.extensionElements.values
                         && bo.extensionElements.values[0]
@@ -213,28 +264,28 @@ module.exports = {
                         && bo.extensionElements.values[0].inputOutput.inputParameters
                     ) {
                         var inputs = bo.extensionElements.values[0].inputOutput.inputParameters;
-                        for(var i = 0; i < inputs.length; i++){
-                            if(inputs[i].name == "to") {
+                        for (var i = 0; i < inputs.length; i++) {
+                            if (inputs[i].name == "to") {
                                 to = inputs[i].value;
                             }
-                            if(inputs[i].name == "subject") {
+                            if (inputs[i].name == "subject") {
                                 subject = inputs[i].value;
                             }
-                            if(inputs[i].name == "text") {
+                            if (inputs[i].name == "text") {
                                 content = inputs[i].value;
                             }
                         }
                     }
 
-                    bpmnjs.designerCallbacks.configEmail(to, subject, content, function(to, subj, content){
-                        helper.toServiceTask(bpmnFactory, replace, selection, element, function(serviceTask, element){
+                    bpmnjs.designerCallbacks.configEmail(to, subject, content, function (to, subj, content) {
+                        helper.toServiceTask(bpmnFactory, replace, selection, element, function (serviceTask, element) {
                             serviceTask.name = "send mail";
                             var inputs = createMailParameter(bpmnjs, to, subj, content);
                             var mailConnector = createConnector(bpmnjs, "mail-send", inputs, []);
                             setExtentionsElement(bpmnjs, serviceTask, mailConnector);
                             refresh();
                         });
-                    }, function(){
+                    }, function () {
 
                     });
                     return true;
@@ -243,18 +294,18 @@ module.exports = {
         }
     },
 
-    external: function(group, element, bpmnjs, eventBus, bpmnFactory, replace, selection) {
-        var refresh = function(){
+    external: function (group, element, bpmnjs, eventBus, bpmnFactory, replace, selection) {
+        var refresh = function () {
             eventBus.fire('elements.changed', {elements: [element]});
         };
 
         group.entries.push({
             id: "iot-extern-device-type-select-button",
             html: "<button class='bpmn-iot-button' data-action='selectIotDeviceTypeForExtern'>Use IoT Device-Type</button>",
-            selectIotDeviceTypeForExtern: function(element, node) {
-                bpmnjs.designerCallbacks.findIotDeviceType(getDeviceTypeServiceFromServiceElement(element), function(connectorInfo){
-                    helper.toExternalServiceTask(bpmnFactory, replace, selection, element, function(serviceTask, element){
-                        serviceTask.topic = "execute_in_dose";
+            selectIotDeviceTypeForExtern: function (element, node) {
+                bpmnjs.designerCallbacks.findIotDeviceType(getDeviceTypeServiceFromServiceElement(element), function (connectorInfo) {
+                    helper.toExternalServiceTask(bpmnFactory, replace, selection, element, function (serviceTask, element) {
+                        serviceTask.topic = "optimistic";
                         serviceTask.name = connectorInfo.deviceType.name + " " + connectorInfo.service.name;
                         var script = createTextInputParameter(bpmnjs, "payload", getPayload(connectorInfo));
                         var parameter = createTaskParameter(bpmnjs, connectorInfo.skeleton.inputs);
@@ -275,37 +326,37 @@ module.exports = {
             }
         });
 
-        function inputsExist(element){
-            if(element.businessObject.extensionElements
+        function inputsExist(element) {
+            if (element.businessObject.extensionElements
                 && element.businessObject.extensionElements.values
                 && element.businessObject.extensionElements.values[0]
                 && element.businessObject.extensionElements.values[0].inputParameters
                 && element.businessObject.extensionElements.values[0].inputParameters.length > 1
-            ){
+            ) {
                 return true
             }
             return false;
         }
 
-        function outputsExist(element){
-            if(element.businessObject.extensionElements
+        function outputsExist(element) {
+            if (element.businessObject.extensionElements
                 && element.businessObject.extensionElements.values
                 && element.businessObject.extensionElements.values[0]
                 && element.businessObject.extensionElements.values[0].outputParameters
                 && element.businessObject.extensionElements.values[0].outputParameters.length > 0
-                && element.businessObject.topic == "execute_in_dose"
-            ){
+                && element.businessObject.topic == "pessimistic"
+            ) {
                 return true
             }
             return false;
         }
 
-        if(inputsExist(element)){
+        if (inputsExist(element)) {
             group.entries.push({
                 id: "iot-extern-device-input-edit-button",
                 html: "<button class='bpmn-iot-button' data-action='editInput'>Edit Input</button>",
-                editInput: function(element, node) {
-                    bpmnjs.designerCallbacks.editInput(element, function(){
+                editInput: function (element, node) {
+                    bpmnjs.designerCallbacks.editInput(element, function () {
                         refresh();
                     });
                     return true;
@@ -313,13 +364,13 @@ module.exports = {
             });
         }
 
-        if(outputsExist(element)){
+        if (outputsExist(element)) {
             group.entries.push({
                 id: "iot-extern-device-output-edit-button",
                 html: "<button class='bpmn-iot-button' data-action='editOutput'>Select Output-Variables</button>",
-                editOutput: function(element, node) {
+                editOutput: function (element, node) {
                     var outputs = element.businessObject.extensionElements.values[0].outputParameters;
-                    bpmnjs.designerCallbacks.editOutput(outputs, function(){
+                    bpmnjs.designerCallbacks.editOutput(outputs, function () {
                         refresh();
                     });
                     return true;
@@ -328,27 +379,27 @@ module.exports = {
         }
     },
 
-    influx: function(group, element, bpmnjs, eventBus, bpmnFactory, replace, selection) {
-        var refresh = function(){
+    influx: function (group, element, bpmnjs, eventBus, bpmnFactory, replace, selection) {
+        var refresh = function () {
             eventBus.fire('elements.changed', {elements: [element]});
         };
 
         group.entries.push({
             id: "iot-influx-device-type-select-button",
             html: "<button class='bpmn-iot-button' data-action='influxButton'>Add data analysis</button>",
-            influxButton: function(element, node) {
-                bpmnjs.designerCallbacks.editHistoricDataConfig(getAggregationConfigFromServiceElement(element), function(config){
-                    helper.toExternalServiceTask(bpmnFactory, replace, selection, element, function(serviceTask, element){
+            influxButton: function (element, node) {
+                bpmnjs.designerCallbacks.editHistoricDataConfig(getAggregationConfigFromServiceElement(element), function (config) {
+                    helper.toExternalServiceTask(bpmnFactory, replace, selection, element, function (serviceTask, element) {
                         // Set topic and name in designer 
                         serviceTask.topic = "export"
                         serviceTask.name = config.analysisAction
-                        
+
                         // Set input and output variables for the process
                         var inputs = [createTextInputParameter(bpmnjs, "config", JSON.stringify(config))]
                         var outputs = [createOutputParameter(bpmnjs, "export_result", "${global_export_result}", null)]
                         var inputOutput = createInputOutput(bpmnjs, inputs, outputs)
                         setExtentionsElement(bpmnjs, serviceTask, inputOutput)
-                        
+
                         refresh();
                     });
                 });
@@ -356,35 +407,35 @@ module.exports = {
             }
         });
 
-        function getAggregationConfigFromServiceElement(element){
+        function getAggregationConfigFromServiceElement(element) {
             var extentionElements = getBusinessObject(element).extensionElements;
-            if(extentionElements && extentionElements.values && extentionElements.values[0]){
+            if (extentionElements && extentionElements.values && extentionElements.values[0]) {
                 var inputs = extentionElements.values[0].inputParameters;
                 var config = JSON.parse(inputs[0].value);
                 return config;
             }
         }
 
-        function outputsExist(element){
-            if(element.businessObject.extensionElements
+        function outputsExist(element) {
+            if (element.businessObject.extensionElements
                 && element.businessObject.extensionElements.values
                 && element.businessObject.extensionElements.values[0]
                 && element.businessObject.extensionElements.values[0].outputParameters
                 && element.businessObject.extensionElements.values[0].outputParameters.length > 0
                 && element.businessObject.topic == "export"
-            ){
+            ) {
                 return true
             }
             return false;
         }
 
-        if(outputsExist(element)){
+        if (outputsExist(element)) {
             group.entries.push({
                 id: "iot-extern-device-output-edit-button",
                 html: "<button class='bpmn-iot-button' data-action='editOutput'>Select Output-Variables</button>",
-                editOutput: function(element, node) {
+                editOutput: function (element, node) {
                     var outputs = element.businessObject.extensionElements.values[0].outputParameters;
-                    bpmnjs.designerCallbacks.editOutput(outputs, function(){
+                    bpmnjs.designerCallbacks.editOutput(outputs, function () {
                         refresh();
                     });
                     return true;
@@ -393,39 +444,39 @@ module.exports = {
         }
     },
 
-    info:function(group, element, bpmnjs){
+    info: function (group, element, bpmnjs) {
         group.entries.push({
             id: "iot-extern-device-variable-list",
             html: bpmnjs.designerCallbacks.getInfoHtml(element)
         });
     },
 
-    timeHelper:function(group, element, bpmnjs, eventBus, modeling){
+    timeHelper: function (group, element, bpmnjs, eventBus, modeling) {
         group.entries.push({
             id: "set-duration",
             html: "<button class='bpmn-iot-button' data-action='setDuration'>set Duration</button>",
-            setDuration: function(element, node) {
+            setDuration: function (element, node) {
                 var moddle = bpmnjs.get('moddle');
                 var bo = getBusinessObject(element).eventDefinitions[0];
-                bpmnjs.designerCallbacks.durationDialog(bo.timeDuration && bo.timeDuration.body).then(function(result){
+                bpmnjs.designerCallbacks.durationDialog(bo.timeDuration && bo.timeDuration.body).then(function (result) {
                     var duration = moddle.create('bpmn:FormalExpression', {
-                        body : result.iso.string
+                        body: result.iso.string
                     });
 
-                    if(bo.timeCycle){
+                    if (bo.timeCycle) {
                         delete bo.timeCycle;
                     }
-                    if(bo.timeDate){
+                    if (bo.timeDate) {
                         delete bo.timeDate;
                     }
-                    if(bo.timeDuration){
+                    if (bo.timeDuration) {
                         delete bo.timeDuration;
                     }
 
                     bo.timeDuration = duration;
                     eventBus.fire('elements.changed', {elements: [element]});
                     modeling.updateProperties(element, {name: result.text});
-                }, function(){
+                }, function () {
 
                 });
                 return true;
@@ -435,28 +486,28 @@ module.exports = {
         group.entries.push({
             id: "set-date",
             html: "<button class='bpmn-iot-button' data-action='setDate'>set Date</button>",
-            setDate: function(element, node) {
+            setDate: function (element, node) {
                 var moddle = bpmnjs.get('moddle');
                 var bo = getBusinessObject(element).eventDefinitions[0];
-                bpmnjs.designerCallbacks.dateDialog(bo.timeDate && bo.timeDate.body).then(function(result){
+                bpmnjs.designerCallbacks.dateDialog(bo.timeDate && bo.timeDate.body).then(function (result) {
                     var dateString = result.iso;
                     var date = moddle.create('bpmn:FormalExpression', {
-                        body : dateString
+                        body: dateString
                     });
-                    if(bo.timeCycle){
+                    if (bo.timeCycle) {
                         delete bo.timeCycle;
                     }
-                    if(bo.timeDate){
+                    if (bo.timeDate) {
                         delete bo.timeDate;
                     }
-                    if(bo.timeDuration){
+                    if (bo.timeDuration) {
                         delete bo.timeDuration;
                     }
 
                     bo.timeDate = date;
                     eventBus.fire('elements.changed', {elements: [element]});
                     modeling.updateProperties(element, {name: result.text});
-                }, function(){
+                }, function () {
 
                 });
                 return true;
@@ -466,28 +517,28 @@ module.exports = {
         group.entries.push({
             id: "set-cycle",
             html: "<button class='bpmn-iot-button' data-action='setCycle'>set Cycle</button>",
-            setCycle: function(element, node) {
+            setCycle: function (element, node) {
                 var moddle = bpmnjs.get('moddle');
                 var bo = getBusinessObject(element).eventDefinitions[0];
-                bpmnjs.designerCallbacks.cycleDialog(bo.timeCycle && bo.timeCycle.body).then(function(result){
+                bpmnjs.designerCallbacks.cycleDialog(bo.timeCycle && bo.timeCycle.body).then(function (result) {
                     var date = moddle.create('bpmn:FormalExpression', {
-                        body : result.cron
+                        body: result.cron
                     });
 
-                    if(bo.timeCycle){
+                    if (bo.timeCycle) {
                         delete bo.timeCycle;
                     }
-                    if(bo.timeDate){
+                    if (bo.timeDate) {
                         delete bo.timeDate;
                     }
-                    if(bo.timeDuration){
+                    if (bo.timeDuration) {
                         delete bo.timeDuration;
                     }
 
                     bo.timeCycle = date;
                     eventBus.fire('elements.changed', {elements: [element]});
                     modeling.updateProperties(element, {name: result.text});
-                }, function(){
+                }, function () {
 
                 });
                 return true;
