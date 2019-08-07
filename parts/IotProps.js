@@ -155,10 +155,14 @@ function createTaskParameter(bpmnjs, inputs) {
     return result;
 }
 
+function setExternalTopic() {
+
+    
+}
 
 function createTaskResults(bpmnjs, outputs) {
     var result = [];
-    if (!outputs) {
+    if (!outputs || outputs == "") {
         return result;
     }
     var paths = helper.getOutputPaths(outputs);
@@ -190,57 +194,6 @@ function getDeviceTypeServiceFromServiceElement(element) {
 
 
 module.exports = {
-    completion: function (group, element, options, bpmnjs, eventBus, bpmnFactory, replace, selection) {
-        var refresh = function () {
-            eventBus.fire('elements.changed', {elements: [element]});
-        };
-
-        var getImplementationType = options.getImplementationType;
-        var getSelected = options.getSelectedParameter;
-
-        function isExternal(element) {
-            return getImplementationType(element) === 'external';
-        }
-
-        var selectOptions = [
-            {value: 'optimistic', name: 'optimistic'},
-            {value: 'pessimistic', name: 'pessimistic'},
-        ];
-
-        group.entries.push(entryFactory.selectBox({
-            id: 'completionStrategy',
-            label: 'Strategy',
-            selectOptions: selectOptions,
-            modelProperty: 'completionStrategy',
-
-            get: function (element, node) {
-                var bo = getSelected(element, node);
-
-                var completionStrategy = 'optimistic';
-
-                if (typeof bo !== 'undefined') {
-                    var definition = bo.get('definition');
-                    if(typeof definition !== 'undefined'){
-                        var type = definition.$type;
-                        completionStrategy = typeInfo[type].value;
-                    }
-                }
-
-                return {
-                    completionStrategy: completionStrategy
-                };
-            },
-
-            set: function (element, values, node) {
-                var bo = getBusinessObject(element)
-
-            },
-
-            hidden: function (element, node) {
-                return !isExternal(element);
-            }
-        }));
-    },
     email: function (group, element, bpmnjs, eventBus, bpmnFactory, replace, selection) {
         var refresh = function () {
             eventBus.fire('elements.changed', {elements: [element]});
@@ -305,12 +258,20 @@ module.exports = {
             selectIotDeviceTypeForExtern: function (element, node) {
                 bpmnjs.designerCallbacks.findIotDeviceType(getDeviceTypeServiceFromServiceElement(element), function (connectorInfo) {
                     helper.toExternalServiceTask(bpmnFactory, replace, selection, element, function (serviceTask, element) {
-                        serviceTask.topic = "optimistic";
+                        serviceTask.topic = connectorInfo.completionStrategy;
                         serviceTask.name = connectorInfo.deviceType.name + " " + connectorInfo.service.name;
                         var script = createTextInputParameter(bpmnjs, "payload", getPayload(connectorInfo));
                         var parameter = createTaskParameter(bpmnjs, connectorInfo.skeleton.inputs);
                         var inputs = [script].concat(parameter);
-                        var outputs = createTaskResults(bpmnjs, connectorInfo.skeleton.outputs);
+
+                        var outputs;
+
+                        if(serviceTask.topic == "optimistic"){
+                            outputs = createTaskResults(bpmnjs, "");
+                        }else{
+                            outputs = createTaskResults(bpmnjs, connectorInfo.skeleton.outputs);
+                        }
+
                         var inputOutput = createInputOutput(bpmnjs, inputs, outputs);
                         setExtentionsElement(bpmnjs, serviceTask, inputOutput);
 

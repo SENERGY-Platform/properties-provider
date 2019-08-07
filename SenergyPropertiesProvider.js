@@ -76,17 +76,6 @@ function createIotExternalTaskGroup(element, bpmnjs, eventBus, bpmnFactory, repl
     return iotGroup;
 }
 
-function createCompletionStrategyTaskGroup(element, bpmnjs, eventBus, bpmnFactory, replace, selection) {
-    var iotGroup = {
-        id: 'completion-strategy',
-        label: 'Completion Strategy',
-        entries: [],
-        enabled: isTask
-    };
-    iotProps.external(iotGroup, element, bpmnjs, eventBus, bpmnFactory, replace, selection);
-    return iotGroup;
-}
-
 function createHelperGroup(element, bpmnjs, eventBus, bpmnFactory, replace, selection) {
     var helperGroup = {
         id: 'iot-helper',
