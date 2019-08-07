@@ -180,13 +180,14 @@ function createTaskResults(bpmnjs, outputs) {
 
 
 function getDeviceTypeServiceFromServiceElement(element) {
-    var extentionElements = getBusinessObject(element).extensionElements;
+    var bo = getBusinessObject(element);
+    var extentionElements = bo.extensionElements;
     if (extentionElements && extentionElements.values && extentionElements.values[0]) {
         var inputs = extentionElements.values[0].inputParameters;
         for (i = 0; i < inputs.length; i++) {
             if (inputs[i].name == "payload") {
                 var payload = JSON.parse(inputs[i].value);
-                return {serviceId: payload.service, deviceTypeId: payload.device_type};
+                return {serviceId: payload.service, deviceTypeId: payload.device_type, completionStrategy: bo.get('camunda:topic')};
             }
         }
     }
