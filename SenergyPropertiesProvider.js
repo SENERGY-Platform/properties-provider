@@ -14,22 +14,6 @@
  * limitations under the License.
  */
 
-/*
- * Copyright 2019 InfAI (CC SES)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 var iotProps = require('./parts/IotProps');
 
 var ImplementationTypeHelper = require('bpmn-js-properties-panel/lib/helper/ImplementationTypeHelper');
@@ -40,9 +24,9 @@ var PropertiesActivator = require('bpmn-js-properties-panel/lib/PropertiesActiva
 
 var CamundaProvider = require('bpmn-js-properties-panel/lib/provider/camunda').propertiesProvider[1];
 
-function SenergyPropertiesProvider(eventBus, bpmnFactory, elementRegistry, elementTemplates, bpmnjs, replace, selection, modeling, translate) {
+function SenergyPropertiesProvider(eventBus, canvas, bpmnFactory, elementRegistry, elementTemplates, bpmnjs, replace, selection, modeling, translate) {
     this.getTabs = function(element) {
-        var camunda = new CamundaProvider(eventBus, bpmnFactory, elementRegistry, elementTemplates, translate);
+        var camunda = new CamundaProvider(eventBus, canvas, bpmnFactory, elementRegistry, elementTemplates, translate);
         var camundaTabs = camunda.getTabs(element);
         camundaTabs[0].groups.unshift(createIotInfoGroup(element, bpmnjs));
         camundaTabs[0].groups.unshift(createIotExternalTaskGroup(element, bpmnjs, eventBus, bpmnFactory, replace, selection));
@@ -122,10 +106,9 @@ function createTimeEventHelperGroup(element, bpmnjs, eventBus, modeling){
     return timeEventGroup;
 }
 
-
-
 SenergyPropertiesProvider.$inject = [
     'eventBus',
+    'canvas',
     'bpmnFactory',
     'elementRegistry',
     'elementTemplates',
