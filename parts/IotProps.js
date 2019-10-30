@@ -89,6 +89,7 @@ function getPayload(connectorInfo) {
     return JSON.stringify({
         function: connectorInfo.function,
         device_class: connectorInfo.device_class,
+        aspect: connectorInfo.aspect,
         label: connectorInfo.function.name,
         values: connectorInfo.skeleton
     }, null, 4)
@@ -190,6 +191,7 @@ function getDeviceTypeServiceFromServiceElement(element) {
               return {
                 function: payload.function,
                 device_class: payload.device_class,
+                aspect: payload.aspect,
                 completionStrategy: bo.get('camunda:topic')
               };
             }
@@ -264,7 +266,7 @@ module.exports = {
                 bpmnjs.designerCallbacks.findIotDeviceType(getDeviceTypeServiceFromServiceElement(element), function (connectorInfo) {
                     helper.toExternalServiceTask(bpmnFactory, replace, selection, element, function (serviceTask, element) {
                         serviceTask.topic = connectorInfo.completionStrategy;
-                        serviceTask.name = connectorInfo.device_class.name + " " + connectorInfo.function.name;
+                        serviceTask.name = connectorInfo.device_class.name || connectorInfo.aspect.name + " " + connectorInfo.function.name;
                         var script = createTextInputParameter(bpmnjs, "payload", getPayload(connectorInfo));
                         var parameter = createTaskParameter(bpmnjs, connectorInfo.skeleton.inputs);
                         var inputs = [script].concat(parameter);
