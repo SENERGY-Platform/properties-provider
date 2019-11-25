@@ -266,7 +266,7 @@ module.exports = {
                 bpmnjs.designerCallbacks.findIotDeviceType(getDeviceTypeServiceFromServiceElement(element), function (connectorInfo) {
                     helper.toExternalServiceTask(bpmnFactory, replace, selection, element, function (serviceTask, element) {
                         serviceTask.topic = connectorInfo.completionStrategy;
-                        serviceTask.name = connectorInfo.device_class.name || connectorInfo.aspect.name + " " + connectorInfo.function.name;
+                        serviceTask.name = (connectorInfo.device_class.name || connectorInfo.aspect.name) + " " + connectorInfo.function.name;
                         var script = createTextInputParameter(bpmnjs, "payload", getPayload(connectorInfo));
                         var parameter = createTaskParameter(bpmnjs, connectorInfo.skeleton.inputs);
                         var inputs = [script].concat(parameter);
