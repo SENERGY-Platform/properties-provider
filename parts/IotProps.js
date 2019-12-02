@@ -19,6 +19,12 @@ var getBusinessObject = require('bpmn-js/lib/util/ModelUtil').getBusinessObject;
 var extensionElementsHelper = require('bpmn-js-properties-panel/lib/helper/ExtensionElementsHelper');
 var ImplementationTypeHelper = require('bpmn-js-properties-panel/lib/helper/ImplementationTypeHelper');
 var helper = require('./helper');
+const typeString = "https://schema.org/Text";
+const typeInteger = "https://schema.org/Integer";
+const typeFloat = "https://schema.org/Float";
+const typeBoolean = "https://schema.org/Boolean";
+const typeList = "https://schema.org/ItemList";
+const typeStructure = "https://schema.org/StructuredValue";
 
 function generateUUID() { // Public Domain/MIT
     var d = new Date().getTime();
@@ -88,10 +94,11 @@ var createConnector = function (bpmnjs, connectorId, inputs, outputs) {
 function getPayload(connectorInfo) {
     return JSON.stringify({
         function: connectorInfo.function,
-        device_class: connectorInfo.device_class,
-        aspect: connectorInfo.aspect,
+        device_class: connectorInfo.device_class || null,
+        aspect: connectorInfo.aspect || null,
         label: connectorInfo.function.name,
-        values: connectorInfo.skeleton
+        input: generateInputStructure(connectorInfo.characteristic),
+        characteristic_id: connectorInfo.characteristic.id
     }, null, 4)
 }
 
@@ -159,6 +166,37 @@ function createTaskParameter(bpmnjs, inputs) {
 function setExternalTopic() {
 
     
+}
+
+function generateInputStructure(characteristic) {
+    switch (characteristic.type) {
+        case typeString: {
+            return "";
+        }
+        case typeFloat: {
+            return 0.0;
+        }
+        case typeInteger: {
+            return 0;
+        }
+        case typeBoolean: {
+            return false;
+        }
+        case typeStructure: {
+           var result = {};
+            characteristic.sub_characteristics.forEach(function (subCharacteristic) {
+                result[subCharacteristic.name] = generateInputStructure(subCharacteristic)
+            });
+            return result;
+        }
+        case typeList: {
+            var result = [];
+            characteristic.sub_characteristics.forEach(function (subCharacteristic) {
+                result[parseInt(subCharacteristic.name)] = generateInputStructure(subCharacteristic)
+            });
+            return result;
+        }
+    }
 }
 
 function createTaskResults(bpmnjs, outputs) {
@@ -268,7 +306,7 @@ module.exports = {
                         serviceTask.topic = connectorInfo.completionStrategy;
                         serviceTask.name = (connectorInfo.device_class.name || connectorInfo.aspect.name) + " " + connectorInfo.function.name;
                         var script = createTextInputParameter(bpmnjs, "payload", getPayload(connectorInfo));
-                        var parameter = createTaskParameter(bpmnjs, connectorInfo.skeleton.inputs);
+                        var parameter = createTaskParameter(bpmnjs, generateInputStructure(connectorInfo.characteristic));
                         var inputs = [script].concat(parameter);
 
                         var outputs;
