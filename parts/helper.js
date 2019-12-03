@@ -23,7 +23,6 @@ var is = require('bpmn-js/lib/util/ModelUtil').is,
 module.exports = {
     toMessageEvent: toMessageEvent,
     toExternalServiceTask: toExternalServiceTask,
-    getInputPaths: getInputPaths,
     getOutputPaths: getOutputPaths,
     toServiceTask: toServiceTask
 };
@@ -213,24 +212,7 @@ function isPrimitive(test) {
     return (test !== Object(test));
 }
 
-function getInputPaths(structure, currentPath){
-    if(!currentPath){
-        currentPath = ["inputs"];
-    }
 
-    if(isPrimitive(structure)){
-        return [currentPath];
-    }
-
-    var result = [];
-    for (key in structure){
-        if(structure.hasOwnProperty(key)){
-            result = result.concat(getInputPaths(structure[key], currentPath.concat([key])));
-        }
-    }
-
-    return result;
-}
 
 function getOutputPaths(structure, currentPath){
     if(!currentPath){

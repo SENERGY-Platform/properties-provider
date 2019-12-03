@@ -148,24 +148,29 @@ function getRoot(businessObject) {
 
 function createTaskParameter(bpmnjs, inputs) {
     var result = [];
-    if (!inputs) {
+    if (inputs === null || inputs === undefined) {
         return result;
     }
-    var inputPaths = helper.getInputPaths(inputs);
-    var names = [];
+    var inputPaths = getParameterPaths(inputs);
     for (i = 0; i < inputPaths.length; i++) {
-        names.push(inputPaths[i].join("."))
-    }
-    names.sort();
-    for (i = 0; i < names.length; i++) {
-        result.push(createTextInputParameter(bpmnjs, names[i], ""));
+        result.push(createTextInputParameter(bpmnjs, inputPaths[i].path, inputPaths[i].value));
     }
     return result;
 }
 
-function setExternalTopic() {
-
-    
+function getParameterPaths(value, path) {
+    if(!path){
+        path = "inputs"
+    }
+    //is primitive
+    if(value !== Object(value)){
+        return [{path: path, value: value}]
+    }
+    var result = [];
+    for(var key in value){
+        result = result.concat(getParameterPaths(value[key], [path, key].join(".")))
+    }
+    return result
 }
 
 function generateInputStructure(characteristic) {
