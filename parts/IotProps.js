@@ -164,7 +164,7 @@ function getParameterPaths(value, path) {
     }
     //is primitive
     if(value !== Object(value)){
-        return [{path: path, value: value}]
+        return [{path: path, value: JSON.stringify(value)}]
     }
     var result = [];
     for(var key in value){
