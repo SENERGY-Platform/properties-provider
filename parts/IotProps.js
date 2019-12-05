@@ -304,7 +304,7 @@ module.exports = {
 
         group.entries.push({
             id: "iot-extern-device-type-select-button",
-            html: "<button class='bpmn-iot-button' data-action='selectIotDeviceTypeForExtern'>Use IoT Device-Type</button>",
+            html: "<button class='bpmn-iot-button' data-action='selectIotDeviceTypeForExtern'>Select Function</button>",
             selectIotDeviceTypeForExtern: function (element, node) {
                 bpmnjs.designerCallbacks.findIotDeviceType(getDeviceTypeServiceFromServiceElement(element), function (connectorInfo) {
                     helper.toExternalServiceTask(bpmnFactory, replace, selection, element, function (serviceTask, element) {
