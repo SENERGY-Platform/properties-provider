@@ -98,7 +98,8 @@ function getPayload(connectorInfo) {
         aspect: connectorInfo.aspect || null,
         label: connectorInfo.function.name,
         input: generateInputStructure(connectorInfo.characteristic),
-        characteristic_id: connectorInfo.characteristic.id
+        characteristic_id: connectorInfo.characteristic.id,
+        retries: connectorInfo.retries
     }, null, 4)
 }
 
@@ -235,7 +236,8 @@ function getDeviceTypeServiceFromServiceElement(element) {
                 function: payload.function,
                 device_class: payload.device_class,
                 aspect: payload.aspect,
-                completionStrategy: bo.get('camunda:topic')
+                completionStrategy: bo.get('camunda:topic'),
+                retries: payload.retries
               };
             }
         }
@@ -314,13 +316,7 @@ module.exports = {
                         var parameter = createTaskParameter(bpmnjs, generateInputStructure(connectorInfo.characteristic));
                         var inputs = [script].concat(parameter);
 
-                        var outputs;
-
-                        if(serviceTask.topic == "optimistic"){
-                            outputs = createTaskResults(bpmnjs, "");
-                        }else{
-                            outputs = createTaskResults(bpmnjs, connectorInfo.skeleton.outputs);
-                        }
+                        var outputs = [];
 
                         var inputOutput = createInputOutput(bpmnjs, inputs, outputs);
                         setExtentionsElement(bpmnjs, serviceTask, inputOutput);
