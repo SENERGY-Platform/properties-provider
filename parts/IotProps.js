@@ -19,6 +19,12 @@ var getBusinessObject = require('bpmn-js/lib/util/ModelUtil').getBusinessObject;
 var extensionElementsHelper = require('bpmn-js-properties-panel/lib/helper/ExtensionElementsHelper');
 var ImplementationTypeHelper = require('bpmn-js-properties-panel/lib/helper/ImplementationTypeHelper');
 var helper = require('./helper');
+const typeString = "https://schema.org/Text";
+const typeInteger = "https://schema.org/Integer";
+const typeFloat = "https://schema.org/Float";
+const typeBoolean = "https://schema.org/Boolean";
+const typeList = "https://schema.org/ItemList";
+const typeStructure = "https://schema.org/StructuredValue";
 
 function generateUUID() { // Public Domain/MIT
     var d = new Date().getTime();
@@ -87,10 +93,13 @@ var createConnector = function (bpmnjs, connectorId, inputs, outputs) {
 
 function getPayload(connectorInfo) {
     return JSON.stringify({
-        label: connectorInfo.service.name,
-        device_type: connectorInfo.deviceType.id,
-        service: connectorInfo.service.id,
-        values: connectorInfo.skeleton
+        function: connectorInfo.function,
+        device_class: connectorInfo.device_class || null,
+        aspect: connectorInfo.aspect || null,
+        label: connectorInfo.function.name,
+        input: generateInputStructure(connectorInfo.characteristic),
+        characteristic_id: connectorInfo.characteristic.id,
+        retries: connectorInfo.retries
     }, null, 4)
 }
 
@@ -140,24 +149,60 @@ function getRoot(businessObject) {
 
 function createTaskParameter(bpmnjs, inputs) {
     var result = [];
-    if (!inputs) {
+    if (inputs === null || inputs === undefined) {
         return result;
     }
-    var inputPaths = helper.getInputPaths(inputs);
-    var names = [];
+    var inputPaths = getParameterPaths(inputs);
     for (i = 0; i < inputPaths.length; i++) {
-        names.push(inputPaths[i].join("."))
-    }
-    names.sort();
-    for (i = 0; i < names.length; i++) {
-        result.push(createTextInputParameter(bpmnjs, names[i], ""));
+        result.push(createTextInputParameter(bpmnjs, inputPaths[i].path, inputPaths[i].value));
     }
     return result;
 }
 
-function setExternalTopic() {
+function getParameterPaths(value, path) {
+    if(!path){
+        path = "inputs"
+    }
+    //is primitive
+    if(value !== Object(value)){
+        return [{path: path, value: JSON.stringify(value)}]
+    }
+    var result = [];
+    for(var key in value){
+        result = result.concat(getParameterPaths(value[key], [path, key].join(".")))
+    }
+    return result
+}
 
-    
+function generateInputStructure(characteristic) {
+    switch (characteristic.type) {
+        case typeString: {
+            return "";
+        }
+        case typeFloat: {
+            return 0.0;
+        }
+        case typeInteger: {
+            return 0;
+        }
+        case typeBoolean: {
+            return false;
+        }
+        case typeStructure: {
+           var result = {};
+            characteristic.sub_characteristics.forEach(function (subCharacteristic) {
+                result[subCharacteristic.name] = generateInputStructure(subCharacteristic)
+            });
+            return result;
+        }
+        case typeList: {
+            var result = [];
+            characteristic.sub_characteristics.forEach(function (subCharacteristic) {
+                result[parseInt(subCharacteristic.name)] = generateInputStructure(subCharacteristic)
+            });
+            return result;
+        }
+    }
 }
 
 function createTaskResults(bpmnjs, outputs) {
@@ -187,7 +232,13 @@ function getDeviceTypeServiceFromServiceElement(element) {
         for (i = 0; i < inputs.length; i++) {
             if (inputs[i].name == "payload") {
                 var payload = JSON.parse(inputs[i].value);
-                return {serviceId: payload.service, deviceTypeId: payload.device_type, completionStrategy: bo.get('camunda:topic')};
+              return {
+                function: payload.function,
+                device_class: payload.device_class,
+                aspect: payload.aspect,
+                completionStrategy: bo.get('camunda:topic'),
+                retries: payload.retries
+              };
             }
         }
     }
@@ -255,23 +306,24 @@ module.exports = {
 
         group.entries.push({
             id: "iot-extern-device-type-select-button",
-            html: "<button class='bpmn-iot-button' data-action='selectIotDeviceTypeForExtern'>Use IoT Device-Type</button>",
+            html: "<button class='bpmn-iot-button' data-action='selectIotDeviceTypeForExtern'>Select Function</button>",
             selectIotDeviceTypeForExtern: function (element, node) {
                 bpmnjs.designerCallbacks.findIotDeviceType(getDeviceTypeServiceFromServiceElement(element), function (connectorInfo) {
                     helper.toExternalServiceTask(bpmnFactory, replace, selection, element, function (serviceTask, element) {
                         serviceTask.topic = connectorInfo.completionStrategy;
-                        serviceTask.name = connectorInfo.deviceType.name + " " + connectorInfo.service.name;
+                        if (connectorInfo.device_class !== null) {
+                            serviceTask.name = connectorInfo.device_class.name
+                        } else {
+                            if (connectorInfo.aspect !== null) {
+                                serviceTask.name = connectorInfo.aspect.name
+                            }
+                        }
+                        serviceTask.name = serviceTask.name + " " + connectorInfo.function.name;
                         var script = createTextInputParameter(bpmnjs, "payload", getPayload(connectorInfo));
-                        var parameter = createTaskParameter(bpmnjs, connectorInfo.skeleton.inputs);
+                        var parameter = createTaskParameter(bpmnjs, generateInputStructure(connectorInfo.characteristic));
                         var inputs = [script].concat(parameter);
 
-                        var outputs;
-
-                        if(serviceTask.topic == "optimistic"){
-                            outputs = createTaskResults(bpmnjs, "");
-                        }else{
-                            outputs = createTaskResults(bpmnjs, connectorInfo.skeleton.outputs);
-                        }
+                        var outputs = [];
 
                         var inputOutput = createInputOutput(bpmnjs, inputs, outputs);
                         setExtentionsElement(bpmnjs, serviceTask, inputOutput);

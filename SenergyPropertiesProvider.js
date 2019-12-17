@@ -52,7 +52,7 @@ var isTimeEvent = function (element) {
 function createIotExternalTaskGroup(element, bpmnjs, eventBus, bpmnFactory, replace, selection) {
     var iotGroup = {
         id: 'iot-extern',
-        label: 'IoT-Device',
+        label: 'Function',
         entries: [],
         enabled: isTask
     };
