@@ -91,13 +91,13 @@ var createConnector = function (bpmnjs, connectorId, inputs, outputs) {
     });
 };
 
-function getPayload(connectorInfo) {
+function getPayload(connectorInfo, input) {
     return JSON.stringify({
         function: connectorInfo.function,
         device_class: connectorInfo.device_class || null,
         aspect: connectorInfo.aspect || null,
         label: connectorInfo.function.name,
-        input: generateStructure(connectorInfo.characteristic, true),
+        input: input ? generateStructure(connectorInfo.characteristic, true) : {},
         characteristic_id: connectorInfo.characteristic.id,
         retries: connectorInfo.retries
     }, null, 4)
@@ -321,11 +321,16 @@ module.exports = {
                             }
                         }
                         serviceTask.name = serviceTask.name + " " + connectorInfo.function.name;
-                        var script = createTextInputParameter(bpmnjs, "payload", getPayload(connectorInfo));
+
+                        var script;
+
                         if (connectorInfo.function.rdf_type === "https://senergy.infai.org/ontology/ControllingFunction"){
+                            script = createTextInputParameter(bpmnjs, "payload", getPayload(connectorInfo, true));
                             var inputs = [script].concat(createTaskParameter(bpmnjs, generateStructure(connectorInfo.characteristic, true), 'inputs', 'input'));
+                            var outputs = [];
                         }
                         if (connectorInfo.function.rdf_type === "https://senergy.infai.org/ontology/MeasuringFunction"){
+                            script = createTextInputParameter(bpmnjs, "payload", getPayload(connectorInfo, false));
                             var inputs = [script];
                             var outputs = createTaskParameter(bpmnjs, generateStructure(connectorInfo.characteristic, false), 'outputs', 'output');
                         }
