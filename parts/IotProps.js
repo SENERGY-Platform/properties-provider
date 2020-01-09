@@ -97,7 +97,7 @@ function getPayload(connectorInfo) {
         device_class: connectorInfo.device_class || null,
         aspect: connectorInfo.aspect || null,
         label: connectorInfo.function.name,
-        input: generateInputStructure(connectorInfo.characteristic),
+        input: generateStructure(connectorInfo.characteristic),
         characteristic_id: connectorInfo.characteristic.id,
         retries: connectorInfo.retries
     }, null, 4)
@@ -147,58 +147,60 @@ function getRoot(businessObject) {
     return parent;
 }
 
-function createTaskParameter(bpmnjs, inputs) {
+function createTaskParameter(bpmnjs, inputs, path, option) {
     var result = [];
     if (inputs === null || inputs === undefined) {
         return result;
     }
-    var inputPaths = getParameterPaths(inputs);
+    var inputPaths = getParameterPaths(inputs, path, option);
     for (i = 0; i < inputPaths.length; i++) {
         result.push(createTextInputParameter(bpmnjs, inputPaths[i].path, inputPaths[i].value));
     }
     return result;
 }
 
-function getParameterPaths(value, path) {
-    if(!path){
-        path = "inputs"
-    }
+function getParameterPaths(value, path, option) {
     //is primitive
     if(value !== Object(value)){
-        return [{path: path, value: JSON.stringify(value)}]
+        if (option === 'input') {
+            return [{path: path, value: JSON.stringify(value)}]
+        }
+        if (option === 'output') {
+            return [{path: path, value: value}]
+        }
     }
     var result = [];
     for(var key in value){
-        result = result.concat(getParameterPaths(value[key], [path, key].join(".")))
+        result = result.concat(getParameterPaths(value[key], [path, key].join("."), option))
     }
     return result
 }
 
-function generateInputStructure(characteristic) {
+function generateStructure(characteristic, input) {
     switch (characteristic.type) {
         case typeString: {
-            return "";
+            return input ? "" : '${result}';
         }
         case typeFloat: {
-            return 0.0;
+            return input ? 0.0 : '${result}';
         }
         case typeInteger: {
-            return 0;
+            return input ? 0 : '${result}';
         }
         case typeBoolean: {
-            return false;
+            return input ? false : '${result}';
         }
         case typeStructure: {
            var result = {};
             characteristic.sub_characteristics.forEach(function (subCharacteristic) {
-                result[subCharacteristic.name] = generateInputStructure(subCharacteristic)
+                result[subCharacteristic.name] = generateStructure(subCharacteristic, input)
             });
             return result;
         }
         case typeList: {
             var result = [];
             characteristic.sub_characteristics.forEach(function (subCharacteristic) {
-                result[parseInt(subCharacteristic.name)] = generateInputStructure(subCharacteristic)
+                result[parseInt(subCharacteristic.name)] = generateStructure(subCharacteristic, input)
             });
             return result;
         }
@@ -320,10 +322,13 @@ module.exports = {
                         }
                         serviceTask.name = serviceTask.name + " " + connectorInfo.function.name;
                         var script = createTextInputParameter(bpmnjs, "payload", getPayload(connectorInfo));
-                        var parameter = createTaskParameter(bpmnjs, generateInputStructure(connectorInfo.characteristic));
-                        var inputs = [script].concat(parameter);
-
-                        var outputs = [];
+                        if (connectorInfo.function.rdf_type === "https://senergy.infai.org/ontology/ControllingFunction"){
+                            var inputs = [script].concat(createTaskParameter(bpmnjs, generateStructure(connectorInfo.characteristic, true), 'inputs', 'input'));
+                        }
+                        if (connectorInfo.function.rdf_type === "https://senergy.infai.org/ontology/MeasuringFunction"){
+                            var inputs = [script];
+                            var outputs = createTaskParameter(bpmnjs, generateStructure(connectorInfo.characteristic, false), 'outputs', 'output');
+                        }
 
                         var inputOutput = createInputOutput(bpmnjs, inputs, outputs);
                         setExtentionsElement(bpmnjs, serviceTask, inputOutput);
