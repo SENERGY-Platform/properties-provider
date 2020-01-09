@@ -154,7 +154,12 @@ function createTaskParameter(bpmnjs, inputs, path, option) {
     }
     var inputPaths = getParameterPaths(inputs, path, option);
     for (i = 0; i < inputPaths.length; i++) {
-        result.push(createTextInputParameter(bpmnjs, inputPaths[i].path, inputPaths[i].value));
+        if (option === 'input') {
+            result.push(createTextInputParameter(bpmnjs, inputPaths[i].path, inputPaths[i].value));
+        }
+        if (option === 'output') {
+            result.push(createOutputParameter(bpmnjs, inputPaths[i].path, inputPaths[i].value));
+        }
     }
     return result;
 }
@@ -176,31 +181,32 @@ function getParameterPaths(value, path, option) {
     return result
 }
 
-function generateStructure(characteristic, input) {
+function generateStructure(characteristic, input, name) {
+    var outputValue = '${result' + name + '}';
     switch (characteristic.type) {
         case typeString: {
-            return input ? "" : '${result}';
+            return input ? "" : outputValue;
         }
         case typeFloat: {
-            return input ? 0.0 : '${result}';
+            return input ? 0.0 : outputValue;
         }
         case typeInteger: {
-            return input ? 0 : '${result}';
+            return input ? 0 : outputValue;
         }
         case typeBoolean: {
-            return input ? false : '${result}';
+            return input ? false : outputValue;
         }
         case typeStructure: {
            var result = {};
             characteristic.sub_characteristics.forEach(function (subCharacteristic) {
-                result[subCharacteristic.name] = generateStructure(subCharacteristic, input)
+                result[subCharacteristic.name] = generateStructure(subCharacteristic, input, name + '.' + subCharacteristic.name)
             });
             return result;
         }
         case typeList: {
             var result = [];
             characteristic.sub_characteristics.forEach(function (subCharacteristic) {
-                result[parseInt(subCharacteristic.name)] = generateStructure(subCharacteristic, input)
+                result[parseInt(subCharacteristic.name)] = generateStructure(subCharacteristic, input, name + '.' + subCharacteristic.name)
             });
             return result;
         }
@@ -323,16 +329,18 @@ module.exports = {
                         serviceTask.name = serviceTask.name + " " + connectorInfo.function.name;
 
                         var script;
+                        var inputs;
+                        var outputs;
 
                         if (connectorInfo.function.rdf_type === "https://senergy.infai.org/ontology/ControllingFunction"){
                             script = createTextInputParameter(bpmnjs, "payload", getPayload(connectorInfo, true));
-                            var inputs = [script].concat(createTaskParameter(bpmnjs, generateStructure(connectorInfo.characteristic, true), 'inputs', 'input'));
-                            var outputs = [];
+                            inputs = [script].concat(createTaskParameter(bpmnjs, generateStructure(connectorInfo.characteristic, true, ''), 'inputs', 'input'));
+                            outputs = [];
                         }
                         if (connectorInfo.function.rdf_type === "https://senergy.infai.org/ontology/MeasuringFunction"){
                             script = createTextInputParameter(bpmnjs, "payload", getPayload(connectorInfo, false));
-                            var inputs = [script];
-                            var outputs = createTaskParameter(bpmnjs, generateStructure(connectorInfo.characteristic, false), 'outputs', 'output');
+                            inputs = [script];
+                            outputs = createTaskParameter(bpmnjs, generateStructure(connectorInfo.characteristic, false, ''), 'outputs', 'output');
                         }
 
                         var inputOutput = createInputOutput(bpmnjs, inputs, outputs);
