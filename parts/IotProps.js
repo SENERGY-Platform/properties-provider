@@ -97,7 +97,7 @@ function getPayload(connectorInfo) {
         device_class: connectorInfo.device_class || null,
         aspect: connectorInfo.aspect || null,
         label: connectorInfo.function.name,
-        input: generateStructure(connectorInfo.characteristic),
+        input: generateStructure(connectorInfo.characteristic, true),
         characteristic_id: connectorInfo.characteristic.id,
         retries: connectorInfo.retries
     }, null, 4)
