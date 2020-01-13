@@ -66,6 +66,13 @@ var createMailParameter = function (bpmnjs, to, subj, content) {
     ];
 };
 
+var createNotificationParameter = function (bpmnjs, subj, message) {
+    return [
+        createInputParameter(bpmnjs, "payload", "{\"message\": \""+message+"\", \"title\": \""+subj+"\"}"),
+        createInputParameter(bpmnjs, "deploymentIdentifier", "notification")
+    ];
+};
+
 var createScriptInputParameter = function (bpmnjs, name, value) {
     var moddle = bpmnjs.get('moddle');
     var script = moddle.create('camunda:Script', {
@@ -91,13 +98,13 @@ var createConnector = function (bpmnjs, connectorId, inputs, outputs) {
     });
 };
 
-function getPayload(connectorInfo) {
+function getPayload(connectorInfo, input) {
     return JSON.stringify({
         function: connectorInfo.function,
         device_class: connectorInfo.device_class || null,
         aspect: connectorInfo.aspect || null,
         label: connectorInfo.function.name,
-        input: generateInputStructure(connectorInfo.characteristic),
+        input: input ? generateStructure(connectorInfo.characteristic, true) : {},
         characteristic_id: connectorInfo.characteristic.id,
         retries: connectorInfo.retries
     }, null, 4)
@@ -147,58 +154,66 @@ function getRoot(businessObject) {
     return parent;
 }
 
-function createTaskParameter(bpmnjs, inputs) {
+function createTaskParameter(bpmnjs, inputs, path, option) {
     var result = [];
     if (inputs === null || inputs === undefined) {
         return result;
     }
-    var inputPaths = getParameterPaths(inputs);
+    var inputPaths = getParameterPaths(inputs, path, option);
     for (i = 0; i < inputPaths.length; i++) {
-        result.push(createTextInputParameter(bpmnjs, inputPaths[i].path, inputPaths[i].value));
+        if (option === 'input') {
+            result.push(createTextInputParameter(bpmnjs, inputPaths[i].path, inputPaths[i].value));
+        }
+        if (option === 'output') {
+            result.push(createOutputParameter(bpmnjs, inputPaths[i].path, inputPaths[i].value));
+        }
     }
     return result;
 }
 
-function getParameterPaths(value, path) {
-    if(!path){
-        path = "inputs"
-    }
+function getParameterPaths(value, path, option) {
     //is primitive
     if(value !== Object(value)){
-        return [{path: path, value: JSON.stringify(value)}]
+        if (option === 'input') {
+            return [{path: path, value: JSON.stringify(value)}]
+        }
+        if (option === 'output') {
+            return [{path: path, value: value}]
+        }
     }
     var result = [];
     for(var key in value){
-        result = result.concat(getParameterPaths(value[key], [path, key].join(".")))
+        result = result.concat(getParameterPaths(value[key], [path, key].join("."), option))
     }
     return result
 }
 
-function generateInputStructure(characteristic) {
+function generateStructure(characteristic, input, name) {
+    var outputValue = '${result' + name + '}';
     switch (characteristic.type) {
         case typeString: {
-            return "";
+            return input ? "" : outputValue;
         }
         case typeFloat: {
-            return 0.0;
+            return input ? 0.0 : outputValue;
         }
         case typeInteger: {
-            return 0;
+            return input ? 0 : outputValue;
         }
         case typeBoolean: {
-            return false;
+            return input ? false : outputValue;
         }
         case typeStructure: {
            var result = {};
             characteristic.sub_characteristics.forEach(function (subCharacteristic) {
-                result[subCharacteristic.name] = generateInputStructure(subCharacteristic)
+                result[subCharacteristic.name] = generateStructure(subCharacteristic, input, name + '.' + subCharacteristic.name)
             });
             return result;
         }
         case typeList: {
             var result = [];
             characteristic.sub_characteristics.forEach(function (subCharacteristic) {
-                result[parseInt(subCharacteristic.name)] = generateInputStructure(subCharacteristic)
+                result[parseInt(subCharacteristic.name)] = generateStructure(subCharacteristic, input, name + '.' + subCharacteristic.name)
             });
             return result;
         }
@@ -299,6 +314,55 @@ module.exports = {
         }
     },
 
+    notification: function (group, element, bpmnjs, eventBus, bpmnFactory, replace, selection) {
+        var refresh = function () {
+            eventBus.fire('elements.changed', {elements: [element]});
+        };
+
+        if (bpmnjs.designerCallbacks.configNotification) {
+            group.entries.push({
+                id: "send-notification-helper",
+                html: "<button class='bpmn-iot-button' data-action='sendNotificationHelper'>Notification</button>",
+                sendNotificationHelper: function (element, node) {
+                    var moddle = bpmnjs.get('moddle');
+                    var bo = getBusinessObject(element);
+                    var subject = "";
+                    var content = "";
+                    if (
+                        bo.extensionElements
+                        && bo.extensionElements.values
+                        && bo.extensionElements.values[0]
+                        && bo.extensionElements.values[0].inputOutput
+                        && bo.extensionElements.values[0].inputOutput.inputParameters
+                    ) {
+                        var inputs = bo.extensionElements.values[0].inputOutput.inputParameters;
+                        for (var i = 0; i < inputs.length; i++) {
+                            if (inputs[i].name == "subject") {
+                                subject = inputs[i].value;
+                            }
+                            if (inputs[i].name == "text") {
+                                content = inputs[i].value;
+                            }
+                        }
+                    }
+
+                    bpmnjs.designerCallbacks.configNotification(subject, content, function (subj, content) {
+                        helper.toServiceTask(bpmnFactory, replace, selection, element, function (serviceTask, element) {
+                            serviceTask.name = "send notification";
+                            var inputs = createNotificationParameter(bpmnjs, subj, content);
+                            var httpConnector = createConnector(bpmnjs, "http-connector", inputs, []);
+                            setExtentionsElement(bpmnjs, serviceTask, httpConnector);
+                            refresh();
+                        });
+                    }, function () {
+
+                    });
+                    return true;
+                }
+            });
+        }
+    },
+
     external: function (group, element, bpmnjs, eventBus, bpmnFactory, replace, selection) {
         var refresh = function () {
             eventBus.fire('elements.changed', {elements: [element]});
@@ -319,11 +383,21 @@ module.exports = {
                             }
                         }
                         serviceTask.name = serviceTask.name + " " + connectorInfo.function.name;
-                        var script = createTextInputParameter(bpmnjs, "payload", getPayload(connectorInfo));
-                        var parameter = createTaskParameter(bpmnjs, generateInputStructure(connectorInfo.characteristic));
-                        var inputs = [script].concat(parameter);
 
-                        var outputs = [];
+                        var script;
+                        var inputs;
+                        var outputs;
+
+                        if (connectorInfo.function.rdf_type === "https://senergy.infai.org/ontology/ControllingFunction"){
+                            script = createTextInputParameter(bpmnjs, "payload", getPayload(connectorInfo, true));
+                            inputs = [script].concat(createTaskParameter(bpmnjs, generateStructure(connectorInfo.characteristic, true, ''), 'inputs', 'input'));
+                            outputs = [];
+                        }
+                        if (connectorInfo.function.rdf_type === "https://senergy.infai.org/ontology/MeasuringFunction"){
+                            script = createTextInputParameter(bpmnjs, "payload", getPayload(connectorInfo, false));
+                            inputs = [script];
+                            outputs = createTaskParameter(bpmnjs, generateStructure(connectorInfo.characteristic, false, ''), 'outputs', 'output');
+                        }
 
                         var inputOutput = createInputOutput(bpmnjs, inputs, outputs);
                         setExtentionsElement(bpmnjs, serviceTask, inputOutput);
