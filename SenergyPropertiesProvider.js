@@ -68,6 +68,7 @@ function createHelperGroup(element, bpmnjs, eventBus, bpmnFactory, replace, sele
         enabled: isTask
     };
     iotProps.email(helperGroup, element, bpmnjs, eventBus, bpmnFactory, replace, selection);
+    iotProps.notification(helperGroup, element, bpmnjs, eventBus, bpmnFactory, replace, selection);
     return helperGroup;
 }
 

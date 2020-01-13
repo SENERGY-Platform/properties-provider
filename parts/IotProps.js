@@ -66,6 +66,13 @@ var createMailParameter = function (bpmnjs, to, subj, content) {
     ];
 };
 
+var createNotificationParameter = function (bpmnjs, subj, message) {
+    return [
+        createInputParameter(bpmnjs, "payload", "{\"message\": \""+message+"\", \"title\": \""+subj+"\"}"),
+        createInputParameter(bpmnjs, "deploymentIdentifier", "notification")
+    ];
+};
+
 var createScriptInputParameter = function (bpmnjs, name, value) {
     var moddle = bpmnjs.get('moddle');
     var script = moddle.create('camunda:Script', {
@@ -296,6 +303,55 @@ module.exports = {
                             var inputs = createMailParameter(bpmnjs, to, subj, content);
                             var mailConnector = createConnector(bpmnjs, "mail-send", inputs, []);
                             setExtentionsElement(bpmnjs, serviceTask, mailConnector);
+                            refresh();
+                        });
+                    }, function () {
+
+                    });
+                    return true;
+                }
+            });
+        }
+    },
+
+    notification: function (group, element, bpmnjs, eventBus, bpmnFactory, replace, selection) {
+        var refresh = function () {
+            eventBus.fire('elements.changed', {elements: [element]});
+        };
+
+        if (bpmnjs.designerCallbacks.configNotification) {
+            group.entries.push({
+                id: "send-notification-helper",
+                html: "<button class='bpmn-iot-button' data-action='sendNotificationHelper'>Notification</button>",
+                sendNotificationHelper: function (element, node) {
+                    var moddle = bpmnjs.get('moddle');
+                    var bo = getBusinessObject(element);
+                    var subject = "";
+                    var content = "";
+                    if (
+                        bo.extensionElements
+                        && bo.extensionElements.values
+                        && bo.extensionElements.values[0]
+                        && bo.extensionElements.values[0].inputOutput
+                        && bo.extensionElements.values[0].inputOutput.inputParameters
+                    ) {
+                        var inputs = bo.extensionElements.values[0].inputOutput.inputParameters;
+                        for (var i = 0; i < inputs.length; i++) {
+                            if (inputs[i].name == "subject") {
+                                subject = inputs[i].value;
+                            }
+                            if (inputs[i].name == "text") {
+                                content = inputs[i].value;
+                            }
+                        }
+                    }
+
+                    bpmnjs.designerCallbacks.configNotification(subject, content, function (subj, content) {
+                        helper.toServiceTask(bpmnFactory, replace, selection, element, function (serviceTask, element) {
+                            serviceTask.name = "send notification";
+                            var inputs = createNotificationParameter(bpmnjs, subj, content);
+                            var httpConnector = createConnector(bpmnjs, "http-connector", inputs, []);
+                            setExtentionsElement(bpmnjs, serviceTask, httpConnector);
                             refresh();
                         });
                     }, function () {
