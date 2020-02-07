@@ -28,7 +28,7 @@ function SenergyPropertiesProvider(eventBus, canvas, bpmnFactory, elementRegistr
     this.getTabs = function(element) {
         var camunda = new CamundaProvider(eventBus, canvas, bpmnFactory, elementRegistry, elementTemplates, translate);
         var camundaTabs = camunda.getTabs(element);
-        camundaTabs[0].groups.unshift(createDescriptionGroup());
+        camundaTabs[0].groups.unshift(createDescriptionGroup(element));
         camundaTabs[0].groups.unshift(createIotInfoGroup(element, bpmnjs));
         camundaTabs[0].groups.unshift(createIotExternalTaskGroup(element, bpmnjs, eventBus, bpmnFactory, replace, selection));
         camundaTabs[0].groups.unshift(createHelperGroup(element, bpmnjs, eventBus, bpmnFactory, replace, selection));
@@ -48,6 +48,11 @@ var isEvent = function(element) {
 
 var isTimeEvent = function (element) {
     return element.businessObject && element.businessObject.eventDefinitions && element.businessObject.eventDefinitions[0] && element.businessObject.eventDefinitions[0].$type == "bpmn:TimerEventDefinition"
+};
+
+var isCollaborationOrProcess = function (element) {
+    return is(element, "bpmn:Collaboration") || is(element, "bpmn:Process")
+    // return element.businessObject && element.businessObject.eventDefinitions && element.businessObject.eventDefinitions[0] && element.businessObject.eventDefinitions[0].$type == "bpmn:TimerEventDefinition"
 };
 
 function createIotExternalTaskGroup(element, bpmnjs, eventBus, bpmnFactory, replace, selection) {
@@ -113,7 +118,7 @@ function createDescriptionGroup(){
         id: 'description',
         label: 'Process Description',
         entries: [],
-        enabled: true
+        enabled: isCollaborationOrProcess
     };
     iotProps.description(descGroup);
     return descGroup;
