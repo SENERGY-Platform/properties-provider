@@ -28,6 +28,7 @@ function SenergyPropertiesProvider(eventBus, canvas, bpmnFactory, elementRegistr
     this.getTabs = function(element) {
         var camunda = new CamundaProvider(eventBus, canvas, bpmnFactory, elementRegistry, elementTemplates, translate);
         var camundaTabs = camunda.getTabs(element);
+        camundaTabs[0].groups.unshift(createDescriptionGroup());
         camundaTabs[0].groups.unshift(createIotInfoGroup(element, bpmnjs));
         camundaTabs[0].groups.unshift(createIotExternalTaskGroup(element, bpmnjs, eventBus, bpmnFactory, replace, selection));
         camundaTabs[0].groups.unshift(createHelperGroup(element, bpmnjs, eventBus, bpmnFactory, replace, selection));
@@ -105,6 +106,17 @@ function createTimeEventHelperGroup(element, bpmnjs, eventBus, modeling){
     };
     iotProps.timeHelper(timeEventGroup, element, bpmnjs, eventBus, modeling);
     return timeEventGroup;
+}
+
+function createDescriptionGroup(){
+    var descGroup = {
+        id: 'description',
+        label: 'Process Description',
+        entries: [],
+        enabled: true
+    };
+    iotProps.description(descGroup);
+    return descGroup;
 }
 
 SenergyPropertiesProvider.$inject = [
