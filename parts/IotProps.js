@@ -543,7 +543,7 @@ module.exports = {
         group.entries.push(entryFactory.textBox({
             id : 'desc-field',
             label : 'Description',
-            modelProperty : 'description'
+            modelProperty : 'senergy:description'
         }));
     },
 
