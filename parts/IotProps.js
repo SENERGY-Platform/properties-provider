@@ -539,6 +539,14 @@ module.exports = {
         });
     },
 
+    description: function (group) {
+        group.entries.push(entryFactory.textBox({
+            id : 'desc-field',
+            label : 'Description',
+            modelProperty : 'senergy:description'
+        }));
+    },
+
     timeHelper: function (group, element, bpmnjs, eventBus, modeling) {
         group.entries.push({
             id: "set-duration",
