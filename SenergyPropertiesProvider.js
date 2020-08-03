@@ -29,6 +29,7 @@ function SenergyPropertiesProvider(eventBus, canvas, bpmnFactory, elementRegistr
         var camunda = new CamundaProvider(eventBus, canvas, bpmnFactory, elementRegistry, elementTemplates, translate);
         var camundaTabs = camunda.getTabs(element);
         camundaTabs[0].groups.unshift(createDescriptionGroup(element));
+        camundaTabs[0].groups.unshift(createOrderGroup(element));
         camundaTabs[0].groups.unshift(createIotInfoGroup(element, bpmnjs));
         camundaTabs[0].groups.unshift(createIotMsgEventGroup(element, bpmnjs, eventBus, modeling));
         camundaTabs[0].groups.unshift(createIotExternalTaskGroup(element, bpmnjs, eventBus, bpmnFactory, replace, selection));
@@ -49,6 +50,10 @@ var isEvent = function(element) {
 
 var isMsgEvent = function (element) {
     return element.businessObject && element.businessObject.eventDefinitions && element.businessObject.eventDefinitions[0] && element.businessObject.eventDefinitions[0].$type == "bpmn:MessageEventDefinition"
+};
+
+var isOrderElement = function (element) {
+    return isTask(element) || isMsgEvent(element) || isTimeEvent(element)
 };
 
 
@@ -139,6 +144,18 @@ function createDescriptionGroup(){
     };
     iotProps.description(descGroup);
     return descGroup;
+}
+
+
+function createOrderGroup(){
+    var group = {
+        id: 'order',
+        label: 'Deployment-Order',
+        entries: [],
+        enabled: isOrderElement
+    };
+    iotProps.order(group);
+    return group;
 }
 
 SenergyPropertiesProvider.$inject = [

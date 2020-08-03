@@ -618,6 +618,19 @@ module.exports = {
         }));
     },
 
+    order: function (group) {
+        var options = [];
+        for (var i = 0; i <= 100; i++){
+            options.push({ name: ''+i, value: ''+i })
+        }
+        group.entries.push(entryFactory.selectBox({
+            id : 'order-field',
+            label : 'Order',
+            modelProperty : 'senergy:order',
+            selectOptions: options
+        }));
+    },
+
     timeHelper: function (group, element, bpmnjs, eventBus, modeling) {
         group.entries.push({
             id: "set-duration",
