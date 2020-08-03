@@ -503,8 +503,9 @@ module.exports = {
                         callback({
                             aspect:"test-aspect",
                             iotfunction:"test-function",
-                            characteristic:"test-characteristic"
-                        }, "test-event-label")
+                            characteristic:"test-characteristic",
+                            label: "test-event-label"
+                        } )
                     };
 
                     console.log("missing bpmnjs.designerCallbacks.selectIotFilterCriteria(aspect, iotFunction, characteristic, callback)\nexample for function: ", selectIotFilterCriteria);
@@ -515,14 +516,14 @@ module.exports = {
                     aspect.get(element)["senergy:aspect"],
                     iotfunction.get(element)["senergy:function"],
                     characteristic.get(element)["senergy:characteristic"],
-                    function (filterCriteria, label) {
+                    function (filterCriteria) {
                         var update = {
                             "senergy:aspect": filterCriteria.aspect,
                             "senergy:function": filterCriteria.iotfunction,
                             "senergy:characteristic": filterCriteria.characteristic
                         };
-                        if(label){
-                            update["name"] = label;
+                        if(filterCriteria.label){
+                            update["name"] = filterCriteria.label;
                         }
                         modeling.updateProperties(element, update);
                         eventBus.fire('elements.changed', {elements: [element]});
