@@ -492,7 +492,7 @@ module.exports = {
         });
 
         group.entries.push({
-            id: "iot-extern-device-type-select-button",
+            id: "iot-msg-filter-criteria-select-button",
             html: "<button class='bpmn-iot-button' data-action='selectIotFilterCriteria'>Event Filter-Criteria</button>",
             selectIotFilterCriteria: function (element, node) {
                 var selectIotFilterCriteria = bpmnjs.designerCallbacks.selectIotFilterCriteria; //TODO: implement
