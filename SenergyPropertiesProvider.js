@@ -29,7 +29,9 @@ function SenergyPropertiesProvider(eventBus, canvas, bpmnFactory, elementRegistr
         var camunda = new CamundaProvider(eventBus, canvas, bpmnFactory, elementRegistry, elementTemplates, translate);
         var camundaTabs = camunda.getTabs(element);
         camundaTabs[0].groups.unshift(createDescriptionGroup(element));
+        camundaTabs[0].groups.unshift(createOrderGroup(element));
         camundaTabs[0].groups.unshift(createIotInfoGroup(element, bpmnjs));
+        camundaTabs[0].groups.unshift(createIotMsgEventGroup(element, bpmnjs, eventBus, modeling));
         camundaTabs[0].groups.unshift(createIotExternalTaskGroup(element, bpmnjs, eventBus, bpmnFactory, replace, selection));
         camundaTabs[0].groups.unshift(createHelperGroup(element, bpmnjs, eventBus, bpmnFactory, replace, selection));
         camundaTabs[0].groups.unshift(createInfluxTaskGroup(element, bpmnjs, eventBus, bpmnFactory, replace, selection));
@@ -45,6 +47,15 @@ var isTask = function(element){
 var isEvent = function(element) {
     return element.type == "bpmn:StartEvent"  || element.type == "bpmn:IntermediateCatchEvent";
 };
+
+var isMsgEvent = function (element) {
+    return element.businessObject && element.businessObject.eventDefinitions && element.businessObject.eventDefinitions[0] && element.businessObject.eventDefinitions[0].$type == "bpmn:MessageEventDefinition"
+};
+
+var isOrderElement = function (element) {
+    return isTask(element) || isMsgEvent(element) || isTimeEvent(element)
+};
+
 
 var isTimeEvent = function (element) {
     return element.businessObject && element.businessObject.eventDefinitions && element.businessObject.eventDefinitions[0] && element.businessObject.eventDefinitions[0].$type == "bpmn:TimerEventDefinition"
@@ -63,6 +74,17 @@ function createIotExternalTaskGroup(element, bpmnjs, eventBus, bpmnFactory, repl
         enabled: isTask
     };
     iotProps.external(iotGroup, element, bpmnjs, eventBus, bpmnFactory, replace, selection);
+    return iotGroup;
+}
+
+function createIotMsgEventGroup(element, bpmnjs, eventBus, modeling) {
+    var iotGroup = {
+        id: 'iot-event',
+        label: 'IoT-Message-Event',
+        entries: [],
+        enabled: isMsgEvent
+    };
+    iotProps.msgevent(iotGroup, element, bpmnjs, eventBus, modeling);
     return iotGroup;
 }
 
@@ -122,6 +144,18 @@ function createDescriptionGroup(){
     };
     iotProps.description(descGroup);
     return descGroup;
+}
+
+
+function createOrderGroup(){
+    var group = {
+        id: 'order',
+        label: 'Deployment-Order',
+        entries: [],
+        enabled: isOrderElement
+    };
+    iotProps.order(group);
+    return group;
 }
 
 SenergyPropertiesProvider.$inject = [
