@@ -487,7 +487,7 @@ module.exports = {
 
         var characteristic = entryFactory.textBox({
             id : 'characteristic-field',
-            label : 'Function',
+            label : 'Characteristic',
             modelProperty : 'senergy:characteristic'
         });
 
