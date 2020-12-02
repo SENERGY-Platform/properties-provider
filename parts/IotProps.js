@@ -100,6 +100,7 @@ var createConnector = function (bpmnjs, connectorId, inputs, outputs) {
 
 function getPayload(connectorInfo, input) {
     return JSON.stringify({
+        version: 2,
         function: connectorInfo.function,
         device_class: connectorInfo.device_class || null,
         aspect: connectorInfo.aspect || null,
