@@ -68,7 +68,7 @@ var createMailParameter = function (bpmnjs, to, subj, content) {
 
 var createNotificationParameter = function (bpmnjs, subj, message) {
     return [
-        createInputParameter(bpmnjs, "payload", "{\"message\": \""+message+"\", \"title\": \""+subj+"\"}"),
+        createInputParameter(bpmnjs, "payload", JSON.stringify({message: message, title:subj})),
         createInputParameter(bpmnjs, "deploymentIdentifier", "notification")
     ];
 };
